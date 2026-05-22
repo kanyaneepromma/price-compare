@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เครื่องมือเปรียบเทียบราคาต่อความจุ (Canvas Chart)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fb;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) 120px;
+            gap: 15px;
+            margin-bottom: 25px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .input-field {
+            display: flex;
+            flex-direction: column;
+        }
+        .input-field label {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #7f8c8d;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+        button {
+            border: none;
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            align-self: flex-end;
+            height: 41px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .content-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+        @media (min-width: 768px) {
+            .content-layout {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f4f7;
+            color: #34495e;
+        }
+        .best-deal {
+            background-color: #d4edda !important;
+            color: #155724;
+            font-weight: bold;
+        }
+        .badge {
+            background: #28a745;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+        .delete-btn {
+            background-color: #e74c3c;
+            padding: 5px 10px;
+            font-size: 12px;
+            height: auto;
+        }
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+        canvas {
+            background: #fff;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>แอปเปรียบเทียบ ยี่ห้อ / ความจุ / ราคา</h2>
+    
+    <!-- Input Form -->
+    <div class="form-group">
+        <div class="input-field">
+            <label>ยี่ห้อ (Brand)</label>
+            <input type="text" id="brand" placeholder="เช่น ยี่ห้อ A" value="ยี่ห้อ A">
+        </div>
+        <div class="input-field">
+            <label>ความจุ (เช่น ลิตร, กก.)</label>
+            <input type="number" id="capacity" placeholder="เช่น 29" value="29" min="0.01" step="any">
+        </div>
+        <div class="input-field">
+            <label>ราคารวม (บาท)</label>
+            <input type="number" id="price" placeholder="เช่น 580" value="580" min="0" step="any">
+        </div>
+        <button onclick="addItem()">เพิ่มรายการ</button>
+    </div>
+
+    <!-- Data & Visual Display -->
+    <div class="content-layout">
+        <div>
+            <h3>รายการที่เปรียบเทียบ</h3>
+            <table id="itemTable">
+                <thead>
+                    <tr>
+                        <th>ยี่ห้อ</th>
+                        <th>ความจุ</th>
+                        <th>ราคารวม</th>
+                        <th>ราคาต่อ 1 หน่วย</th>
+                        <th>ลบ</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Dynamic rows here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div>
+            <h3>แผนภูมิแสดงราคาต่อหน่วย (Canvas)</h3>
+            <canvas id="chartCanvas" width="400" height="300"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Initial sample data
+    let items = [
+        { brand: "ยี่ห้อ A (ตัวอย่าง)", capacity: 29, price: 580 },
+        { brand: "ยี่ห้อ B (ตัวอย่าง)", capacity: 10, price: 250 },
+        { brand: "ยี่ห้อ C (ตัวอย่าง)", capacity: 35, price: 630 }
+    ];
+
+    function calculateUnitPrice(item) {
+        if (!item.capacity || item.capacity <= 0) return 0;
+        return item.price / item.capacity;
+    }
+
+    function addItem() {
+        const brandInput = document.getElementById('brand');
+        const capInput = document.getElementById('capacity');
+        const priceInput = document.getElementById('price');
+
+        const brand = brandInput.value.trim();
+        const capacity = parseFloat(capInput.value);
+        const price = parseFloat(priceInput.value);
+
+        if (!brand || isNaN(capacity) || isNaN(price) || capacity <= 0) {
+            alert("กรุณากรอกข้อมูลให้ถูกต้องครบถ้วน และความจุต้องมากกว่า 0");
+            return;
+        }
+
+        items.push({ brand, capacity, price });
+        
+        // Reset inputs for next entry
+        brandInput.value = '';
+        capInput.value = '';
+        priceInput.value = '';
+        
+        updateApp();
+    }
+
+    function deleteItem(index) {
+        items.splice(index, 1);
+        updateApp();
+    }
+
+    function updateApp() {
+        // 1. Find the best deal (lowest price per unit)
+        let lowestPricePerUnit = Infinity;
+        let bestIndex = -1;
+
+        items.forEach((item, index) => {
+            const unitPrice = calculateUnitPrice(item);
+            if (unitPrice < lowestPricePerUnit && unitPrice > 0) {
+                lowestPricePerUnit = unitPrice;
+                bestIndex = index;
+            }
+        });
+
+        // 2. Render Table
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        items.forEach((item, index) => {
+            const unitPrice = calculateUnitPrice(item);
+            const isBest = index === bestIndex;
+            
+            const row = document.createElement('tr');
+            if (isBest) row.className = 'best-deal';
+
+            row.innerHTML = `
+                <td>${item.brand} ${isBest ? '<span class="badge">คุ้มสุด!</span>' : ''}</td>
+                <td>${item.capacity}</td>
+                <td>${item.price.toFixed(2)} บ.</td>
+                <td><strong>${unitPrice.toFixed(2)}</strong> บ./หน่วย</td>
+                <td><button class="delete-btn" onclick="deleteItem(${index})">ลบ</button></td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // 3. Render Canvas Chart
+        drawChart(bestIndex);
+    }
+
+    function drawChart(bestIndex) {
+        const canvas = document.getElementById('chartCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Clear previous draw
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (items.length === 0) {
+            ctx.fillStyle = "#7f8c8d";
+            ctx.font = "14px sans-serif";
+            ctx.fillText("ไม่มีข้อมูลสำหรับแสดงแผนภูมิ", 50, 150);
+            return;
+        }
+
+        // Find max unit price to scale the bars properly
+        let maxUnitPrice = 0;
+        items.forEach(item => {
+            const up = calculateUnitPrice(item);
+            if (up > maxUnitPrice) maxUnitPrice = up;
+        });
+
+        // Chart layouts layout settings
+        const startX = 100;
+        const startY = 40;
+        const barMaxHeight = 200; 
+        const barWidth = 40;
+        const spacing = 30;
+
+        // Draw basic Y-axis guide lines
+        ctx.strokeStyle = "#e1e8ed";
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+            let y = startY + barMaxHeight - (barMaxHeight * (i / 4));
+            ctx.beginPath();
+            ctx.moveTo(startX - 10, y);
+            ctx.lineTo(canvas.width - 20, y);
+            ctx.stroke();
+            
+            // Y-axis labels
+            ctx.fillStyle = "#7f8c8d";
+            ctx.font = "10px sans-serif";
+            ctx.fillText(((maxUnitPrice * (i / 4)) || 0).toFixed(1), 10, y + 4);
+        }
+
+        // Draw Bars
+        items.forEach((item, index) => {
+            const unitPrice = calculateUnitPrice(item);
+            // Calculate bar height relative to maximum value
+            const barHeight = maxUnitPrice > 0 ? (unitPrice / maxUnitPrice) * barMaxHeight : 0;
+            
+            const x = startX + index * (barWidth + spacing);
+            const y = startY + barMaxHeight - barHeight;
+
+            // Choose bar color (Green if it's the best deal, Blue otherwise)
+            ctx.fillStyle = (index === bestIndex) ? "#2ecc71" : "#3498db";
+            
+            // Draw actual bar rectangle
+            ctx.fillRect(x, y, barWidth, barHeight);
+
+            // Draw value on top of bar
+            ctx.fillStyle = "#2c3e50";
+            ctx.font = "bold 11px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(unitPrice.toFixed(1), x + barWidth/2, y - 8);
+
+            // Draw brand text at the bottom (rotated slightly if long)
+            ctx.save();
+            ctx.translate(x + barWidth/2, startY + barMaxHeight + 15);
+            ctx.rotate(-Math.PI / 12); // Rotate text 15 degrees
+            ctx.fillStyle = "#34495e";
+            ctx.font = "11px sans-serif";
+            ctx.textAlign = "right";
+            // Shorten name if too long for layout
+            let displayName = item.brand.length > 10 ? item.brand.substring(0, 8) + '..' : item.brand;
+            ctx.fillText(displayName, 0, 0);
+            ctx.restore();
+        });
+    }
+
+    // Initialize display on startup
+    updateApp();
+</script>
+
+</body>
+</html>
