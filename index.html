@@ -3,158 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เครื่องมือเปรียบเทียบราคาต่อความจุ</title>
+    <title>เครื่องมือเปรียบเทียบราคาต่อความจุ (Mobile-First)</title>
     <!-- Tailwind CSS for modern responsive styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         body {
             font-family: 'Sarabun', sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-800 antialiased p-4 sm:p-6 md:p-8">
+<body class="bg-slate-50 min-h-screen text-slate-800 antialiased p-4 sm:p-6">
 
-    <div class="max-w-6xl mx-auto">
+    <div class="max-w-md mx-auto pb-12">
         <!-- Header -->
-        <header class="mb-8 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center gap-4">
+        <header class="mb-5 flex justify-between items-center">
             <div>
-                <h1 class="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2 justify-center sm:justify-start">
-                    <span class="bg-indigo-600 text-white px-3 py-1 rounded-xl text-2xl font-black shadow-md">฿</span>
-                    เปรียบเทียบราคาต่อความจุ
+                <h1 class="text-2xl font-bold text-slate-950 tracking-tight flex items-center gap-2">
+                    <span class="bg-indigo-600 text-white px-2.5 py-0.5 rounded-lg text-lg font-black shadow-sm">฿</span>
+                    เช็คความคุ้มค่า
                 </h1>
-                <p class="text-slate-500 mt-1">เปรียบเทียบราคาต่อหน่วยเพื่อความคุ้มค่าสูงสุด บันทึกข้อมูลอัตโนมัติ</p>
+                <p class="text-xs text-slate-500 mt-0.5" id="dbStatus">ระบบบันทึกข้อมูลแบบออฟไลน์</p>
             </div>
-            <div class="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2">
-                <span id="dbStatusIndicator" class="w-3 h-3 rounded-full bg-amber-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider" id="dbStatus">กำลังเชื่อมต่อ...</span>
-            </div>
+            <button onclick="clearAllItems()" class="text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-colors border border-rose-100">
+                ล้างทั้งหมด
+            </button>
         </header>
 
-        <!-- Message Toast Box (Instead of standard browser alert()) -->
-        <div id="errorToast" class="hidden transform translate-y-[-10px] transition-all duration-300 ease-out mb-6 bg-rose-50 border-l-4 border-rose-500 p-4 rounded-r-xl shadow-sm">
+        <!-- Dynamic Top Spotlight: The Best Deal (Shows up only if items > 0) -->
+        <div id="bestDealSpotlight" class="hidden mb-6 transform scale-100 transition-all duration-300">
+            <div class="bg-emerald-600 text-white rounded-2xl p-5 shadow-lg shadow-emerald-100 relative overflow-hidden">
+                <!-- Abstract visual background circle -->
+                <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-emerald-500 rounded-full opacity-40"></div>
+                <div class="absolute -right-2 -top-6 w-16 h-16 bg-emerald-500 rounded-full opacity-30"></div>
+                
+                <span class="inline-block bg-emerald-500/50 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full mb-3">
+                    👑 ตัวเลือกที่คุ้มที่สุดของคุณ
+                </span>
+                <div class="flex justify-between items-end">
+                    <div>
+                        <h2 id="bestBrandName" class="text-2xl font-bold truncate pr-4">ยี่ห้อ A</h2>
+                        <p class="text-xs text-emerald-100 mt-1" id="bestDetails">ความจุ 29 หน่วย / ราคารวม 580 บาท</p>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <p class="text-xs text-emerald-100">ตกหน่วยละ</p>
+                        <p class="text-3xl font-black leading-none mt-1"><span id="bestUnitPrice">20.00</span> <span class="text-sm font-normal">฿</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Warning/Error Toast (Replaces ugly alert dialogs) -->
+        <div id="errorToast" class="hidden transform translate-y-[-10px] transition-all duration-300 ease-out mb-5 bg-rose-50 border-l-4 border-rose-500 p-4 rounded-r-xl shadow-sm">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                    <p id="errorText" class="text-sm font-medium text-rose-700"></p>
+                    <p id="errorText" class="text-xs font-semibold text-rose-700"></p>
                 </div>
-                <button onclick="dismissError()" class="text-rose-400 hover:text-rose-600 transition-colors">
+                <button onclick="dismissError()" class="text-rose-400 hover:text-rose-600">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
         </div>
 
-        <!-- Main Layout Split -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Sticky Input Form (Highly optimized for quick mobile typing) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 mb-6">
+            <h2 id="formTitle" class="text-sm font-bold text-slate-900 mb-4 uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                เพิ่มข้อมูลสินค้า
+            </h2>
             
-            <!-- Left Panel: Form & Table -->
-            <div class="lg:col-span-7 flex flex-col gap-6">
-                
-                <!-- Input Card -->
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-150 p-6 transition-all">
-                    <h2 id="formTitle" class="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        เพิ่มรายการเปรียบเทียบใหม่
-                    </h2>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">ยี่ห้อ (Brand)</label>
-                            <input type="text" id="brand" placeholder="เช่น ยี่ห้อ A, ขวดใหญ่" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-300">
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">ความจุ (เช่น 29, 1.5)</label>
-                            <input type="number" id="capacity" placeholder="เช่น 29" min="0.01" step="any" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-300">
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">ราคารวม (บาท)</label>
-                            <input type="number" id="price" placeholder="เช่น 580" min="0" step="any" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-300">
-                        </div>
-                    </div>
-
-                    <div class="mt-6 flex gap-3 justify-end">
-                        <button id="cancelBtn" onclick="cancelEdit()" class="hidden px-5 py-2.5 rounded-xl font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-                            ยกเลิก
-                        </button>
-                        <button id="submitBtn" onclick="handleSubmit()" class="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md shadow-indigo-100 hover:shadow-lg hover:shadow-indigo-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                            <span>เพิ่มรายการ</span>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        </button>
-                    </div>
+            <div class="flex flex-col gap-4">
+                <!-- Row 1: Brand name -->
+                <div class="flex flex-col gap-1">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ยี่ห้อ / รายละเอียด</label>
+                    <input type="text" id="brand" placeholder="เช่น ยี่ห้อ A, สูตรเข้มข้น" class="w-full px-4 py-3 text-base rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-300 bg-slate-50/50">
                 </div>
 
-                <!-- Table Card -->
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-150 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                        <h3 class="font-bold text-slate-900 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-                            รายการปัจจุบัน
-                        </h3>
-                        <span id="itemCount" class="text-xs font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">0 รายการ</span>
+                <!-- Row 2: Capacity & Price Side by Side -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ความจุ (ลิตร, กก, ชิ้น)</label>
+                        <input type="number" id="capacity" placeholder="เช่น 29" min="0.01" step="any" inputmode="decimal" class="w-full px-4 py-3 text-base rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-300 bg-slate-50/50">
                     </div>
-
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50/50 text-slate-400 text-[11px] font-extrabold uppercase tracking-wider border-b border-slate-100">
-                                    <th class="py-4 px-6">ยี่ห้อ (รายละเอียด)</th>
-                                    <th class="py-4 px-4 text-center">ความจุ</th>
-                                    <th class="py-4 px-4 text-right">ราคารวม</th>
-                                    <th class="py-4 px-6 text-right">ราคาต่อ 1 หน่วย</th>
-                                    <th class="py-4 px-6 text-center">จัดการ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tableBody" class="divide-y divide-slate-100 text-sm">
-                                <!-- Dynamic rows build here -->
-                            </tbody>
-                        </table>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ราคารวม (บาท)</label>
+                        <input type="number" id="price" placeholder="เช่น 580" min="0" step="any" inputmode="decimal" class="w-full px-4 py-3 text-base rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-300 bg-slate-50/50">
                     </div>
                 </div>
             </div>
 
-            <!-- Right Panel: Visual Canvas Chart -->
-            <div class="lg:col-span-5 flex flex-col gap-6">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-150 p-6 flex flex-col h-full min-h-[420px]">
-                    <div class="flex justify-between items-center mb-4">
-                        <div>
-                            <h3 class="font-bold text-slate-900 flex items-center gap-2">
-                                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.003 9.003 0 1020.945 13H11V3.055z"/></svg>
-                                แผนภูมิแสดงราคาต่อหน่วย (Canvas)
-                            </h3>
-                            <p class="text-xs text-slate-400 mt-0.5">แท่งที่เตี้ยที่สุดคือทางเลือกที่คุ้มที่สุด</p>
-                        </div>
-                    </div>
-
-                    <!-- Canvas container for responsive layout sizing -->
-                    <div class="relative flex-grow flex items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200 p-4" id="canvasContainer">
-                        <canvas id="chartCanvas" class="w-full h-full max-h-[340px]"></canvas>
-                    </div>
-                </div>
+            <!-- Action buttons -->
+            <div class="mt-5 flex gap-2">
+                <button id="cancelBtn" onclick="cancelEdit()" class="hidden w-1/3 py-3 rounded-xl font-bold text-sm text-slate-500 hover:bg-slate-100 transition-all border border-slate-200">
+                    ยกเลิก
+                </button>
+                <button id="submitBtn" onclick="handleSubmit()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95">
+                    <span>เพิ่มรายการลงตาราง</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                </button>
             </div>
+        </div>
 
+        <!-- Mobile Card List (Replaces wide horizontal-scrolling table) -->
+        <div class="space-y-3">
+            <div class="flex justify-between items-center px-1">
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">รายการที่กำลังเปรียบเทียบ</h3>
+                <span id="itemCount" class="text-xs font-semibold text-slate-400 bg-slate-200/50 px-2.5 py-0.5 rounded-full">0 รายการ</span>
+            </div>
+            
+            <div id="itemsContainer" class="space-y-3">
+                <!-- Stacked cards will render here dynamically -->
+            </div>
         </div>
     </div>
 
     <script>
-        // Default startup items
+        // Start items matching the standard format requested
         let items = [
-            { brand: "ยี่ห้อ A (ตัวอย่าง)", capacity: 29, price: 580 },
-            { brand: "ยี่ห้อ B (ตัวอย่าง)", capacity: 10, price: 250 },
-            { brand: "ยี่ห้อ C (ตัวอย่าง)", capacity: 35, price: 630 }
+            { brand: "ยี่ห้อ A", capacity: 29, price: 580 },
+            { brand: "ยี่ห้อ B", capacity: 10, price: 250 },
+            { brand: "ยี่ห้อ C", capacity: 35, price: 630 }
         ];
 
         let editIndex = -1;
-        const DB_NAME = 'PriceCompareDatabase';
-        const STORE_NAME = 'appData';
+        const DB_NAME = 'MobilePriceCompareDB';
+        const STORE_NAME = 'appStore';
         let dbInstance = null;
         let isStorageSupported = false;
 
-        // SAFE DATABASE INITIALIZER WITH TRY-CATCH
+        // SAFE DATABASE INITIALIZER
         function initDatabase(callback) {
             try {
-                // Check if IndexedDB is available in this browser window
                 if (!window.indexedDB) {
-                    setStorageBackupMode("เบราว์เซอร์ไม่รองรับฐานข้อมูล");
+                    setStorageBackupMode();
                     return callback();
                 }
 
@@ -167,7 +150,7 @@
                             db.createObjectStore(STORE_NAME);
                         }
                     } catch(err) {
-                        console.warn("Database Upgrade Error:", err);
+                        console.warn("Database init error:", err);
                     }
                 };
                 
@@ -176,8 +159,7 @@
                         dbInstance = e.target.result;
                         isStorageSupported = true;
                         
-                        document.getElementById('dbStatus').innerText = "บันทึกข้อมูลอัตโนมัติแล้ว";
-                        document.getElementById('dbStatusIndicator').className = "w-3 h-3 rounded-full bg-emerald-500 animate-pulse";
+                        document.getElementById('dbStatus').innerText = "บันทึกข้อมูลส่วนตัวในเครื่องอัตโนมัติ";
                         
                         const transaction = dbInstance.transaction([STORE_NAME], 'readonly');
                         const store = transaction.objectStore(STORE_NAME);
@@ -187,7 +169,6 @@
                             if (getRequest.result && getRequest.result.length > 0) {
                                 items = getRequest.result;
                             } else {
-                                // Save default setup list
                                 saveDatabaseState();
                             }
                             callback();
@@ -196,30 +177,27 @@
                             callback();
                         };
                     } catch (err) {
-                        setStorageBackupMode("เกิดข้อผิดพลาดในการโหลด");
+                        setStorageBackupMode();
                         callback();
                     }
                 };
                 
                 request.onerror = function() {
-                    setStorageBackupMode("อยู่ในโหมด Sandbox (ไม่บันทึก)");
+                    setStorageBackupMode();
                     callback();
                 };
 
             } catch (error) {
-                // Catch SecurityError thrown by iframe sandboxes
-                setStorageBackupMode("โหมด Sandbox (ไม่มีฐานข้อมูล)");
+                setStorageBackupMode();
                 callback();
             }
         }
 
-        function setStorageBackupMode(message) {
+        function setStorageBackupMode() {
             isStorageSupported = false;
-            document.getElementById('dbStatus').innerText = message;
-            document.getElementById('dbStatusIndicator').className = "w-3 h-3 rounded-full bg-amber-500 animate-pulse";
+            document.getElementById('dbStatus').innerText = "โหมดทดลองใช้ชั่วคราว (ไม่เซฟ)";
         }
 
-        // Safe database state saving
         function saveDatabaseState() {
             if (!isStorageSupported || !dbInstance) return;
             try {
@@ -227,17 +205,17 @@
                 const store = transaction.objectStore(STORE_NAME);
                 store.put(items, 'savedItemsList');
             } catch (err) {
-                console.warn("Could not save to IndexedDB:", err);
+                console.warn("Could not save to DB:", err);
             }
         }
 
-        // Calculate unit price safely
+        // Calculate rate per 1 capacity unit
         function calculateUnitPrice(item) {
             if (!item.capacity || item.capacity <= 0) return 0;
             return item.price / item.capacity;
         }
 
-        // Display in-app warning messages (No Native Alerts)
+        // Custom Error Banner Actions
         function showError(message) {
             const toast = document.getElementById('errorToast');
             const text = document.getElementById('errorText');
@@ -266,36 +244,32 @@
             const capacity = parseFloat(capInput.value);
             const price = parseFloat(priceInput.value);
 
-            // Validation checks
             if (!brand) {
-                showError("กรุณากรอกชื่อยี่ห้อ/รายละเอียดสินค้า");
+                showError("กรุณากรอกระบุยี่ห้อ หรือระบุขนาด");
                 brandInput.focus();
                 return;
             }
             if (isNaN(capacity) || capacity <= 0) {
-                showError("กรุณากรอกความจุเป็นตัวเลขที่มีค่ามากกว่า 0");
+                showError("ความจุต้องเป็นตัวเลขเชิงบวกที่มากกว่า 0");
                 capInput.focus();
                 return;
             }
             if (isNaN(price) || price < 0) {
-                showError("กรุณากรอกราคารวมของสินค้า (อย่างน้อยเป็น 0)");
+                showError("กรุณากรอกราคาที่ถูกต้อง (เป็นตัวเลข)");
                 priceInput.focus();
                 return;
             }
 
             if (editIndex === -1) {
-                // Add Mode
                 items.push({ brand, capacity, price });
             } else {
-                // Edit save mode
                 items[editIndex] = { brand, capacity, price };
                 cancelEdit(); 
             }
 
-            // Save values
             saveDatabaseState();
 
-            // Clear Input Elements
+            // Clear inputs
             brandInput.value = '';
             capInput.value = '';
             priceInput.value = '';
@@ -312,10 +286,10 @@
             document.getElementById('capacity').value = item.capacity;
             document.getElementById('price').value = item.price;
 
-            // Shift form visual look to indicate editing active
+            // Turn UI into orange Edit layout
             document.getElementById('formTitle').innerHTML = `
-                <svg class="w-5 h-5 text-amber-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 15.57M21 15h-1.42"/></svg>
-                กำลังแก้ไขข้อมูล: ${item.brand}
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                กำลังแก้ไขข้อมูลสินค้า
             `;
             document.getElementById('cancelBtn').classList.remove('hidden');
             const submitBtn = document.getElementById('submitBtn');
@@ -323,9 +297,9 @@
                 <span>บันทึกการแก้ไข</span>
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
             `;
-            submitBtn.className = "w-full sm:w-auto px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl shadow-md shadow-amber-100 hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2";
+            submitBtn.className = "w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95";
 
-            document.getElementById('brand').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             document.getElementById('brand').focus();
         }
 
@@ -335,18 +309,18 @@
             document.getElementById('capacity').value = '';
             document.getElementById('price').value = '';
 
-            // Reset UI configuration
+            // Restore standard Form look
             document.getElementById('formTitle').innerHTML = `
-                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                เพิ่มรายการเปรียบเทียบใหม่
+                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                เพิ่มข้อมูลสินค้า
             `;
             document.getElementById('cancelBtn').classList.add('hidden');
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.innerHTML = `
-                <span>เพิ่มรายการ</span>
+                <span>เพิ่มรายการลงตาราง</span>
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             `;
-            submitBtn.className = "w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md shadow-indigo-100 hover:shadow-lg hover:shadow-indigo-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2";
+            submitBtn.className = "w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95";
             dismissError();
         }
 
@@ -361,195 +335,127 @@
             updateApp();
         }
 
+        function clearAllItems() {
+            if (confirm("คุณแน่ใจหรือไม่ว่าต้องการลบรายการเปรียบเทียบทั้งหมด?")) {
+                items = [];
+                cancelEdit();
+                saveDatabaseState();
+                updateApp();
+            }
+        }
+
         function updateApp() {
+            // Update counter badge
             document.getElementById('itemCount').innerText = `${items.length} รายการ`;
 
+            // Calculate Best Rate (Lowest Price / Unit) & Worst Rate (Highest Price / Unit)
             let lowestPricePerUnit = Infinity;
+            let highestPricePerUnit = -Infinity;
             let bestIndex = -1;
+            let worstIndex = -1;
 
             items.forEach((item, index) => {
                 const rate = calculateUnitPrice(item);
-                if (rate < lowestPricePerUnit && rate > 0) {
-                    lowestPricePerUnit = rate;
-                    bestIndex = index;
+                if (rate > 0) {
+                    if (rate < lowestPricePerUnit) {
+                        lowestPricePerUnit = rate;
+                        bestIndex = index;
+                    }
+                    if (rate > highestPricePerUnit) {
+                        highestPricePerUnit = rate;
+                        worstIndex = index;
+                    }
                 }
             });
 
-            // Rebuild Table rows dynamically
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
-
-            if (items.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="py-8 px-6 text-center text-slate-400">
-                            <div class="flex flex-col items-center justify-center gap-2">
-                                <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                                <span>ยังไม่มีรายการสำหรับเปรียบเทียบ</span>
-                            </div>
-                        </td>
-                    </tr>
-                `;
+            // Update Top Featured "Best Deal" Card
+            const spotlight = document.getElementById('bestDealSpotlight');
+            if (bestIndex !== -1 && items.length > 0) {
+                const bestItem = items[bestIndex];
+                document.getElementById('bestBrandName').innerText = bestItem.brand;
+                document.getElementById('bestDetails').innerText = `ความจุ ${bestItem.capacity.toLocaleString()} / ราคารวม ${bestItem.price.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} บ.`;
+                document.getElementById('bestUnitPrice').innerText = lowestPricePerUnit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                spotlight.classList.remove('hidden');
             } else {
-                items.forEach((item, index) => {
-                    const unitPrice = calculateUnitPrice(item);
-                    const isBest = index === bestIndex;
-
-                    const row = document.createElement('tr');
-                    row.className = isBest 
-                        ? 'bg-emerald-50/60 hover:bg-emerald-50 text-slate-900 transition-colors' 
-                        : 'hover:bg-slate-50 text-slate-700 transition-colors';
-
-                    row.innerHTML = `
-                        <td class="py-4 px-6 font-medium">
-                            <div class="flex flex-col">
-                                <span class="flex items-center gap-2">
-                                    ${item.brand}
-                                    ${isBest ? '<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>คุ้มสุด!</span>' : ''}
-                                </span>
-                            </div>
-                        </td>
-                        <td class="py-4 px-4 text-center font-semibold text-slate-600">${item.capacity.toLocaleString()}</td>
-                        <td class="py-4 px-4 text-right font-medium">${item.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ฿</td>
-                        <td class="py-4 px-6 text-right font-bold ${isBest ? 'text-emerald-700' : 'text-indigo-600'}">
-                            ${unitPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <span class="text-xs font-normal text-slate-400">฿/หน่วย</span>
-                        </td>
-                        <td class="py-4 px-6 text-center">
-                            <div class="flex items-center justify-center gap-2">
-                                <button onclick="startEdit(${index})" class="p-1.5 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors" title="แก้ไข">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                                </button>
-                                <button onclick="deleteItem(${index})" class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors" title="ลบ">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                </button>
-                            </div>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
+                spotlight.classList.add('hidden');
             }
 
-            drawChart(bestIndex);
-        }
+            // Only mark "Worst" if we have at least 2 items and they actually differ in price
+            const showWorst = (items.length >= 2 && worstIndex !== bestIndex && highestPricePerUnit > lowestPricePerUnit);
 
-        // Setup Responsive Canvas Drawing
-        const canvas = document.getElementById('chartCanvas');
-        const container = document.getElementById('canvasContainer');
-
-        function resizeCanvas() {
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight || 300;
-            updateApp();
-        }
-
-        function drawChart(bestIndex) {
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Build dynamic Cards List
+            const container = document.getElementById('itemsContainer');
+            container.innerHTML = '';
 
             if (items.length === 0) {
-                ctx.fillStyle = "#94a3b8";
-                ctx.font = "14px 'Sarabun', sans-serif";
-                ctx.textAlign = "center";
-                ctx.fillText("เพิ่มรายการเพื่อเริ่มวิเคราะห์ราคากลางต่อหน่วย", canvas.width / 2, canvas.height / 2);
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl border border-dashed border-slate-200 py-10 px-4 text-center text-slate-400">
+                        <svg class="w-10 h-10 text-slate-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                        <span class="text-sm">ไม่มีสินค้าเปรียบเทียบในขณะนี้ เพิ่มด้านบนได้เลย!</span>
+                    </div>
+                `;
                 return;
             }
 
-            let maxUnitPrice = 0;
-            items.forEach(item => {
-                const rate = calculateUnitPrice(item);
-                if (rate > maxUnitPrice) maxUnitPrice = rate;
-            });
-
-            if (maxUnitPrice === 0) maxUnitPrice = 1;
-
-            const paddingLeft = 55;
-            const paddingRight = 20;
-            const paddingTop = 40;
-            const paddingBottom = 60;
-
-            const chartWidth = canvas.width - paddingLeft - paddingRight;
-            const chartHeight = canvas.height - paddingTop - paddingBottom;
-
-            // Draw Y-Axis lines
-            ctx.strokeStyle = "#f1f5f9";
-            ctx.lineWidth = 1;
-            ctx.fillStyle = "#94a3b8";
-            ctx.font = "11px sans-serif";
-            ctx.textAlign = "right";
-
-            const linesCount = 4;
-            for (let i = 0; i <= linesCount; i++) {
-                const ratio = i / linesCount;
-                const y = paddingTop + chartHeight * (1 - ratio);
-                
-                ctx.beginPath();
-                ctx.moveTo(paddingLeft - 5, y);
-                ctx.lineTo(canvas.width - paddingRight, y);
-                ctx.stroke();
-
-                const val = maxUnitPrice * ratio;
-                ctx.fillText(val.toFixed(1), paddingLeft - 10, y + 4);
-            }
-
-            // Draw Bars
-            const itemsCount = items.length;
-            const barSpacingRatio = 0.4; 
-            const availableSpaceForBars = chartWidth;
-            const sectionWidth = availableSpaceForBars / itemsCount;
-            const barWidth = Math.min(60, sectionWidth * (1 - barSpacingRatio));
-
             items.forEach((item, index) => {
                 const unitPrice = calculateUnitPrice(item);
-                const ratio = unitPrice / maxUnitPrice;
-                const barHeight = chartHeight * ratio;
-
-                const sectionCenterX = paddingLeft + (index * sectionWidth) + (sectionWidth / 2);
-                const x = sectionCenterX - (barWidth / 2);
-                const y = paddingTop + chartHeight - barHeight;
-
                 const isBest = index === bestIndex;
-                const primaryColor = isBest ? '#10b981' : '#4f46e5'; 
+                const isWorst = showWorst && (index === worstIndex);
 
-                // Bar Drawing (Rounded Top Corners)
-                ctx.fillStyle = primaryColor;
-                const radius = Math.min(6, barHeight); 
-                ctx.beginPath();
-                ctx.moveTo(x, y + barHeight);
-                ctx.lineTo(x, y + radius);
-                ctx.quadraticCurveTo(x, y, x + radius, y);
-                ctx.lineTo(x + barWidth - radius, y);
-                ctx.quadraticCurveTo(x + barWidth, y, x + barWidth, y + radius);
-                ctx.lineTo(x + barWidth, y + barHeight);
-                ctx.closePath();
-                ctx.fill();
+                const card = document.createElement('div');
+                
+                // Style based on deal rating
+                let cardClass = 'bg-white border border-slate-150 rounded-2xl p-4 shadow-sm relative transition-all';
+                if (isBest) {
+                    cardClass = 'bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-4 shadow-sm relative transition-all';
+                } else if (isWorst) {
+                    cardClass = 'bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 shadow-sm relative transition-all';
+                }
 
-                // Value Text above bar
-                ctx.fillStyle = isBest ? '#047857' : '#1e1b4b';
-                ctx.font = "bold 12px sans-serif";
-                ctx.textAlign = "center";
-                ctx.fillText(unitPrice.toFixed(2), sectionCenterX, y - 8);
+                card.className = cardClass;
 
-                // Axis label (Brand name)
-                ctx.save();
-                ctx.translate(sectionCenterX, paddingTop + chartHeight + 15);
-                ctx.rotate(-Math.PI / 15); 
-                ctx.fillStyle = isBest ? '#047857' : '#64748b';
-                ctx.font = isBest ? "bold 11px sans-serif" : "11px sans-serif";
-                ctx.textAlign = "right";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="min-w-0 flex-grow">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <h4 class="font-bold text-slate-900 truncate text-base">${item.brand}</h4>
+                                ${isBest ? '<span class="bg-emerald-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>คุ้มที่สุด!</span>' : ''}
+                                ${isWorst ? '<span class="bg-rose-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>แพงที่สุด! ❌</span>' : ''}
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1">
+                                ความจุ <span class="font-bold text-slate-600">${item.capacity.toLocaleString()}</span> &middot; ราคารวม <span class="font-bold text-slate-600">${item.price.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} ฿</span>
+                            </p>
+                        </div>
+                        
+                        <div class="text-right shrink-0">
+                            <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">ราคาต่อหน่วย</p>
+                            <p class="text-lg font-extrabold ${isBest ? 'text-emerald-700' : (isWorst ? 'text-rose-700' : 'text-indigo-600')}">
+                                ${unitPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} 
+                                <span class="text-xs font-normal text-slate-400">฿/1</span>
+                            </p>
+                        </div>
+                    </div>
 
-                let name = item.brand;
-                if (name.length > 8) name = name.substring(0, 7) + '...';
-                ctx.fillText(name, 5, 5);
-                ctx.restore();
+                    <!-- Bottom Action Bar inside Card -->
+                    <div class="mt-3 pt-3 border-t border-dashed ${isBest ? 'border-emerald-200' : (isWorst ? 'border-rose-200' : 'border-slate-100')} flex justify-end gap-2">
+                        <button onclick="startEdit(${index})" class="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 bg-slate-100 hover:bg-indigo-50 px-3 py-2 rounded-lg transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            แก้ไข
+                        </button>
+                        <button onclick="deleteItem(${index})" class="flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-3 py-2 rounded-lg transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            ลบออก
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
             });
         }
 
         // Initialize App
-        window.addEventListener('resize', resizeCanvas);
-        
         window.onload = function() {
             initDatabase(function() {
-                resizeCanvas();
+                updateApp();
             });
         }
     </script>
