@@ -51,7 +51,7 @@
             border-radius: 6px;
             font-size: 15px;
         }
-        button {
+        .btn-main {
             border: none;
             background-color: #3498db;
             color: white;
@@ -64,8 +64,14 @@
             align-self: flex-end;
             height: 41px;
         }
-        button:hover {
+        .btn-main:hover {
             background-color: #2980b9;
+        }
+        .btn-save-edit {
+            background-color: #e67e22;
+        }
+        .btn-save-edit:hover {
+            background-color: #d35400;
         }
         .content-layout {
             display: grid;
@@ -104,11 +110,26 @@
             font-size: 11px;
             margin-left: 5px;
         }
-        .delete-btn {
-            background-color: #e74c3c;
+        .action-btns {
+            display: flex;
+            gap: 5px;
+        }
+        .action-btn {
+            border: none;
+            color: white;
             padding: 5px 10px;
             font-size: 12px;
-            height: auto;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .edit-btn {
+            background-color: #f39c12;
+        }
+        .edit-btn:hover {
+            background-color: #d35400;
+        }
+        .delete-btn {
+            background-color: #e74c3c;
         }
         .delete-btn:hover {
             background-color: #c0392b;
@@ -127,7 +148,6 @@
 <div class="container">
     <h2>แอปเปรียบเทียบ ยี่ห้อ / ความจุ / ราคา</h2>
     
-    <!-- Input Form -->
     <div class="form-group">
         <div class="input-field">
             <label>ยี่ห้อ (Brand)</label>
@@ -141,10 +161,9 @@
             <label>ราคารวม (บาท)</label>
             <input type="number" id="price" placeholder="เช่น 580" value="580" min="0" step="any">
         </div>
-        <button onclick="addItem()">เพิ่มรายการ</button>
+        <button id="submitBtn" class="btn-main" onclick="handleSubmit()">เพิ่มรายการ</button>
     </div>
 
-    <!-- Data & Visual Display -->
     <div class="content-layout">
         <div>
             <h3>รายการที่เปรียบเทียบ</h3>
@@ -155,12 +174,11 @@
                         <th>ความจุ</th>
                         <th>ราคารวม</th>
                         <th>ราคาต่อ 1 หน่วย</th>
-                        <th>ลบ</th>
+                        <th>จัดการ</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <!-- Dynamic rows here -->
-                </tbody>
+                    </tbody>
             </table>
         </div>
         
@@ -172,19 +190,21 @@
 </div>
 
 <script>
-    // Initial sample data
+    // Initial data
     let items = [
         { brand: "ยี่ห้อ A (ตัวอย่าง)", capacity: 29, price: 580 },
         { brand: "ยี่ห้อ B (ตัวอย่าง)", capacity: 10, price: 250 },
         { brand: "ยี่ห้อ C (ตัวอย่าง)", capacity: 35, price: 630 }
     ];
 
+    let editIndex = -1; // -1 means we are adding a new item, otherwise it holds the index of item being edited
+
     function calculateUnitPrice(item) {
         if (!item.capacity || item.capacity <= 0) return 0;
         return item.price / item.capacity;
     }
 
-    function addItem() {
+    function handleSubmit() {
         const brandInput = document.getElementById('brand');
         const capInput = document.getElementById('capacity');
         const priceInput = document.getElementById('price');
@@ -198,9 +218,21 @@
             return;
         }
 
-        items.push({ brand, capacity, price });
+        if (editIndex === -1) {
+            // Add mode
+            items.push({ brand, capacity, price });
+        } else {
+            // Edit mode
+            items[editIndex] = { brand, capacity, price };
+            editIndex = -1; // Reset mode
+            
+            // Reset button styling
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerText = "เพิ่มรายการ";
+            submitBtn.className = "btn-main";
+        }
         
-        // Reset inputs for next entry
+        // Reset inputs
         brandInput.value = '';
         capInput.value = '';
         priceInput.value = '';
@@ -208,13 +240,44 @@
         updateApp();
     }
 
+    function startEdit(index) {
+        editIndex = index;
+        const item = items[index];
+        
+        // Pop values back into the text fields
+        document.getElementById('brand').value = item.brand;
+        document.getElementById('capacity').value = item.capacity;
+        document.getElementById('price').value = item.price;
+        
+        // Change the look and text of the button to alert user they are editing
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.innerText = "บันทึกแก้ไข";
+        submitBtn.className = "btn-main btn-save-edit";
+        
+        // Scroll smoothly to form so user sees it
+        document.getElementById('brand').focus();
+    }
+
     function deleteItem(index) {
+        // If they delete an item while editing it, cancel the edit mode
+        if (editIndex === index) {
+            editIndex = -1;
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerText = "เพิ่มรายการ";
+            submitBtn.className = "btn-main";
+            document.getElementById('brand').value = '';
+            document.getElementById('capacity').value = '';
+            document.getElementById('price').value = '';
+        } else if (editIndex > index) {
+            // Adjust index tracker if an earlier item was removed
+            editIndex--;
+        }
+
         items.splice(index, 1);
         updateApp();
     }
 
     function updateApp() {
-        // 1. Find the best deal (lowest price per unit)
         let lowestPricePerUnit = Infinity;
         let bestIndex = -1;
 
@@ -226,7 +289,6 @@
             }
         });
 
-        // 2. Render Table
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
 
@@ -242,20 +304,22 @@
                 <td>${item.capacity}</td>
                 <td>${item.price.toFixed(2)} บ.</td>
                 <td><strong>${unitPrice.toFixed(2)}</strong> บ./หน่วย</td>
-                <td><button class="delete-btn" onclick="deleteItem(${index})">ลบ</button></td>
+                <td>
+                    <div class="action-btns">
+                        <button class="action-btn edit-btn" onclick="startEdit(${index})">แก้ไข</button>
+                        <button class="action-btn delete-btn" onclick="deleteItem(${index})">ลบ</button>
+                    </div>
+                </td>
             `;
             tbody.appendChild(row);
         });
 
-        // 3. Render Canvas Chart
         drawChart(bestIndex);
     }
 
     function drawChart(bestIndex) {
         const canvas = document.getElementById('chartCanvas');
         const ctx = canvas.getContext('2d');
-        
-        // Clear previous draw
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (items.length === 0) {
@@ -265,21 +329,18 @@
             return;
         }
 
-        // Find max unit price to scale the bars properly
         let maxUnitPrice = 0;
         items.forEach(item => {
             const up = calculateUnitPrice(item);
             if (up > maxUnitPrice) maxUnitPrice = up;
         });
 
-        // Chart layouts layout settings
         const startX = 100;
         const startY = 40;
         const barMaxHeight = 200; 
         const barWidth = 40;
         const spacing = 30;
 
-        // Draw basic Y-axis guide lines
         ctx.strokeStyle = "#e1e8ed";
         ctx.lineWidth = 1;
         for (let i = 0; i <= 4; i++) {
@@ -289,48 +350,38 @@
             ctx.lineTo(canvas.width - 20, y);
             ctx.stroke();
             
-            // Y-axis labels
             ctx.fillStyle = "#7f8c8d";
             ctx.font = "10px sans-serif";
             ctx.fillText(((maxUnitPrice * (i / 4)) || 0).toFixed(1), 10, y + 4);
         }
 
-        // Draw Bars
         items.forEach((item, index) => {
             const unitPrice = calculateUnitPrice(item);
-            // Calculate bar height relative to maximum value
             const barHeight = maxUnitPrice > 0 ? (unitPrice / maxUnitPrice) * barMaxHeight : 0;
             
             const x = startX + index * (barWidth + spacing);
             const y = startY + barMaxHeight - barHeight;
 
-            // Choose bar color (Green if it's the best deal, Blue otherwise)
             ctx.fillStyle = (index === bestIndex) ? "#2ecc71" : "#3498db";
-            
-            // Draw actual bar rectangle
             ctx.fillRect(x, y, barWidth, barHeight);
 
-            // Draw value on top of bar
             ctx.fillStyle = "#2c3e50";
             ctx.font = "bold 11px sans-serif";
             ctx.textAlign = "center";
             ctx.fillText(unitPrice.toFixed(1), x + barWidth/2, y - 8);
 
-            // Draw brand text at the bottom (rotated slightly if long)
             ctx.save();
             ctx.translate(x + barWidth/2, startY + barMaxHeight + 15);
-            ctx.rotate(-Math.PI / 12); // Rotate text 15 degrees
+            ctx.rotate(-Math.PI / 12);
             ctx.fillStyle = "#34495e";
             ctx.font = "11px sans-serif";
             ctx.textAlign = "right";
-            // Shorten name if too long for layout
             let displayName = item.brand.length > 10 ? item.brand.substring(0, 8) + '..' : item.brand;
             ctx.fillText(displayName, 0, 0);
             ctx.restore();
         });
     }
 
-    // Initialize display on startup
     updateApp();
 </script>
 
